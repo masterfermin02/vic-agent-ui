@@ -1,0 +1,11 @@
+{
+    "mcpServers": {
+        "laravel-boost": {
+            "command": "/Users/intellisys/Library/Application Support/Herd/bin/php85",
+            "args": [
+                "/Users/intellisys/Herd/vic-agent-ui/artisan",
+                "boost:mcp"
+            ]
+        }
+    }
+}
