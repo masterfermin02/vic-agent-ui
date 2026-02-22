@@ -2,7 +2,9 @@
   "permissions": {
     "allow": [
       "mcp__laravel-boost__application-info",
-      "mcp__laravel-boost__search-docs"
+      "mcp__laravel-boost__search-docs",
+      "Bash(php artisan make:request:*)",
+      "Bash(php artisan:*)"
     ]
   },
   "enableAllProjectMcpServers": true,

@@ -36,6 +36,19 @@ class UserFactory extends Factory
     }
 
     /**
+     * Indicate that the model has VICIdial credentials configured.
+     */
+    public function vicidialCredentials(): static
+    {
+        return $this->state(fn (array $attributes) => [
+            'vicidial_user' => fake()->userName(),
+            'vicidial_pass' => fake()->password(),
+            'vicidial_phone_login' => fake()->numerify('###'),
+            'vicidial_phone_pass' => fake()->password(),
+        ]);
+    }
+
+    /**
      * Indicate that the model's email address should be unverified.
      */
     public function unverified(): static

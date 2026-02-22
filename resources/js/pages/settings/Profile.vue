@@ -9,7 +9,7 @@ import { Label } from '@/components/ui/label';
 import AppLayout from '@/layouts/AppLayout.vue';
 import SettingsLayout from '@/layouts/settings/Layout.vue';
 import { type BreadcrumbItem } from '@/types';
-import ProfileController from '@/actions/App/Http/Controllers/Settings/ProfileController';
+import ProfileController, { updateVicidialCredentials } from '@/actions/App/Http/Controllers/Settings/ProfileController';
 import { edit } from '@/routes/profile';
 import { send } from '@/routes/verification';
 
@@ -119,6 +119,81 @@ const user = page.props.auth.user;
                             >
                                 Saved.
                             </p>
+                        </Transition>
+                    </div>
+                </Form>
+            </div>
+
+            <div class="flex flex-col space-y-6">
+                <Heading
+                    variant="small"
+                    title="VICIdial Credentials"
+                    description="Credentials used to connect to the VICIdial phone system"
+                />
+
+                <Form
+                    v-bind="updateVicidialCredentials.form()"
+                    class="space-y-6"
+                    v-slot="{ errors, processing, recentlySuccessful }"
+                >
+                    <div class="grid gap-2">
+                        <Label for="vicidial_user">VICIdial Username</Label>
+                        <Input
+                            id="vicidial_user"
+                            name="vicidial_user"
+                            :default-value="user.vicidial_user ?? ''"
+                            autocomplete="off"
+                            placeholder="VICIdial agent username"
+                        />
+                        <InputError class="mt-2" :message="errors.vicidial_user" />
+                    </div>
+
+                    <div class="grid gap-2">
+                        <Label for="vicidial_pass">VICIdial Password</Label>
+                        <Input
+                            id="vicidial_pass"
+                            type="password"
+                            name="vicidial_pass"
+                            autocomplete="new-password"
+                            placeholder="VICIdial agent password"
+                        />
+                        <InputError class="mt-2" :message="errors.vicidial_pass" />
+                    </div>
+
+                    <div class="grid gap-2">
+                        <Label for="vicidial_phone_login">Phone Login</Label>
+                        <Input
+                            id="vicidial_phone_login"
+                            name="vicidial_phone_login"
+                            :default-value="user.vicidial_phone_login ?? ''"
+                            autocomplete="off"
+                            placeholder="Agent phone extension"
+                        />
+                        <InputError class="mt-2" :message="errors.vicidial_phone_login" />
+                    </div>
+
+                    <div class="grid gap-2">
+                        <Label for="vicidial_phone_pass">Phone Password</Label>
+                        <Input
+                            id="vicidial_phone_pass"
+                            type="password"
+                            name="vicidial_phone_pass"
+                            autocomplete="new-password"
+                            placeholder="Agent phone password"
+                        />
+                        <InputError class="mt-2" :message="errors.vicidial_phone_pass" />
+                    </div>
+
+                    <div class="flex items-center gap-4">
+                        <Button :disabled="processing">Save VICIdial Settings</Button>
+
+                        <Transition
+                            enter-active-class="transition ease-in-out"
+                            enter-from-class="opacity-0"
+                            leave-active-class="transition ease-in-out"
+                            leave-to-class="opacity-0"
+                        >
+                            <p v-show="recentlySuccessful" class="text-sm text-neutral-600">Saved.</p>
                         </Transition>
                     </div>
                 </Form>

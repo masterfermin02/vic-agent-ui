@@ -113,6 +113,18 @@ return [
             // 'trust_server_certificate' => env('DB_TRUST_SERVER_CERTIFICATE', 'false'),
         ],
 
+        'vicidial' => [
+            'driver' => env('VICIDIAL_DB_DRIVER', 'mysql'),
+            'host' => env('VICIDIAL_DB_HOST', '127.0.0.1'),
+            'port' => env('VICIDIAL_DB_PORT', '3306'),
+            'database' => env('VICIDIAL_DB_DATABASE', 'asterisk'),
+            'username' => env('VICIDIAL_DB_USERNAME', 'cron'),
+            'password' => env('VICIDIAL_DB_PASSWORD', ''),
+            'charset' => 'utf8mb4',
+            'strict' => false,
+            'engine' => null,
+        ],
+
     ],
 
     /*
