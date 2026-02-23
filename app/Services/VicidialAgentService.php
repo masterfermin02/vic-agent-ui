@@ -554,6 +554,239 @@ class VicidialAgentService
     }
 
     /**
+     * Hang up the customer call while the agent remains logged in.
+     *
+     * Mirrors manager_send.php ACTION=Hangup:
+     *   1. If Asterisk has tracked the customer channel in vicidial_auto_calls,
+     *      insert a Hangup command targeting it.
+     *   2. Always insert a kickall Originate (Local/5555{conf_exten}) so the
+     *      conference bridge is cleared even when the direct channel is unknown.
+     */
+    public function hangupCall(AgentSession $session, string $vicidialUser): void
+    {
+        if (! $session->server_ip || ! $session->conf_exten) {
+            return;
+        }
+
+        $db = $this->db();
+        $now = now()->toDateTimeString();
+        $callerId = 'MDHU'.$session->conf_exten.'_'.time();
+
+        // Reset external_hangup flag (matches manager_send.php Hangup handler).
+        $db->table('vicidial_live_agents')
+            ->where('user', $vicidialUser)
+            ->update(['external_hangup' => 0]);
+
+        // Resolve dialplan context from agent's phone record.
+        $vicUser = $db->table('vicidial_users')->where('user', $vicidialUser)->first(['phone_login']);
+        $extContext = 'default';
+
+        if ($vicUser?->phone_login) {
+            $extContext = $db->table('phones')
+                ->where('login', $vicUser->phone_login)
+                ->value('ext_context') ?: 'default';
+        }
+
+        // If Asterisk has assigned a real customer channel, hang it up directly.
+        $autoCall = $db->table('vicidial_auto_calls')
+            ->where('callerid', $session->asterisk_channel)
+            ->where('server_ip', $session->server_ip)
+            ->first(['channel']);
+
+        if ($autoCall?->channel) {
+            $db->table('vicidial_manager')->insert([
+                'uniqueid' => '',
+                'entry_date' => $now,
+                'status' => 'NEW',
+                'response' => 'N',
+                'server_ip' => $session->server_ip,
+                'channel' => '',
+                'action' => 'Hangup',
+                'callerid' => $callerId,
+                'cmd_line_b' => "Channel: {$autoCall->channel}",
+                'cmd_line_c' => '',
+                'cmd_line_d' => '',
+                'cmd_line_e' => '',
+                'cmd_line_f' => '',
+                'cmd_line_g' => '',
+                'cmd_line_h' => '',
+                'cmd_line_i' => '',
+                'cmd_line_j' => '',
+                'cmd_line_k' => '',
+            ]);
+        }
+
+        // Kickall: clear all conference bridge participants via Local/5555{conf_exten}.
+        $db->table('vicidial_manager')->insert([
+            'uniqueid' => '',
+            'entry_date' => $now,
+            'status' => 'NEW',
+            'response' => 'N',
+            'server_ip' => $session->server_ip,
+            'channel' => '',
+            'action' => 'Originate',
+            'callerid' => $callerId,
+            'cmd_line_b' => "Channel: Local/5555{$session->conf_exten}@{$extContext}",
+            'cmd_line_c' => "Context: {$extContext}",
+            'cmd_line_d' => 'Exten: 8300',
+            'cmd_line_e' => 'Priority: 1',
+            'cmd_line_f' => "Callerid: {$callerId}",
+            'cmd_line_g' => '',
+            'cmd_line_h' => '',
+            'cmd_line_i' => '',
+            'cmd_line_j' => '',
+            'cmd_line_k' => '',
+        ]);
+    }
+
+    /**
+     * Submit a call disposition after the call ends.
+     *
+     * Mirrors vdc_db_query.php updateDISPO for outbound manual calls:
+     *   - Updates vicidial_list lead status
+     *   - Inserts or updates vicidial_log
+     *   - Removes the vicidial_auto_calls entry
+     *   - Closes the current vicidial_agent_log entry with dispo timing
+     *   - Opens a new vicidial_agent_log entry for the post-dispo PAUSED state
+     */
+    public function sendDisposition(AgentSession $session, string $vicidialUser, string $status): void
+    {
+        $db = $this->db();
+        $now = now();
+        $epoch = $now->unix();
+        $nowStr = $now->toDateTimeString();
+        $leadId = (int) $session->current_lead_id;
+
+        // 1. Set live agent to PAUSED and clear call fields.
+        $db->table('vicidial_live_agents')
+            ->where('user', $vicidialUser)
+            ->where('server_ip', $session->server_ip)
+            ->update([
+                'status' => 'PAUSED',
+                'callerid' => '',
+                'lead_id' => 0,
+                'channel' => '',
+                'comments' => '',
+                'external_hangup' => 0,
+                'external_status' => '',
+                'last_state_change' => $nowStr,
+                'pause_code' => '',
+            ]);
+
+        // 2. Stamp the lead with the disposition in vicidial_list.
+        if ($leadId) {
+            $db->table('vicidial_list')
+                ->where('lead_id', $leadId)
+                ->update(['status' => $status, 'user' => $vicidialUser]);
+        }
+
+        // 3. Insert or update vicidial_log for this outbound manual call.
+        if ($leadId && $session->asterisk_channel) {
+            $lead = $db->table('vicidial_list')
+                ->where('lead_id', $leadId)
+                ->first(['list_id', 'phone_number', 'phone_code', 'called_count']);
+
+            $fourHoursAgo = now()->subHours(4)->toDateTimeString();
+
+            $existingLog = $db->table('vicidial_log')
+                ->where('lead_id', $leadId)
+                ->where('call_date', '>', $fourHoursAgo)
+                ->orderByDesc('uniqueid')
+                ->first(['uniqueid']);
+
+            if ($existingLog) {
+                $db->table('vicidial_log')
+                    ->where('uniqueid', $existingLog->uniqueid)
+                    ->update(['status' => $status, 'user' => $vicidialUser]);
+            } else {
+                // Build a fake uniqueid matching VICIdial convention: epoch.padded_lead_id
+                $fakeUniqueId = $epoch.'.'.str_pad((string) $leadId, 9, '0', STR_PAD_LEFT);
+
+                $db->table('vicidial_log')->insertOrIgnore([
+                    'uniqueid' => $fakeUniqueId,
+                    'lead_id' => $leadId,
+                    'list_id' => $lead?->list_id ?? 0,
+                    'campaign_id' => $session->campaign_id,
+                    'call_date' => $nowStr,
+                    'start_epoch' => $epoch,
+                    'end_epoch' => $epoch,
+                    'length_in_sec' => 0,
+                    'status' => $status,
+                    'phone_code' => $lead?->phone_code ?? '1',
+                    'phone_number' => $lead?->phone_number ?? '',
+                    'user' => $vicidialUser,
+                    'comments' => 'MANUAL',
+                    'processed' => 'N',
+                    'user_group' => $session->user_group ?? '',
+                    'term_reason' => 'AGENT',
+                    'alt_dial' => 'MAIN',
+                    'called_count' => $lead?->called_count ?? 0,
+                ]);
+            }
+
+            // 4. Remove the auto_calls entry for this call.
+            $db->table('vicidial_auto_calls')
+                ->where('callerid', $session->asterisk_channel)
+                ->delete();
+        }
+
+        // 5. Close the current agent_log entry with dispo timing data.
+        if ($session->agent_log_id) {
+            $currentLog = $db->table('vicidial_agent_log')
+                ->where('agent_log_id', $session->agent_log_id)
+                ->first(['talk_epoch', 'wait_epoch', 'dispo_epoch', 'dispo_sec']);
+
+            if ($currentLog) {
+                $updates = ['status' => $status];
+
+                $talkEpoch = (int) $currentLog->talk_epoch;
+                $dispoEpoch = (int) $currentLog->dispo_epoch;
+
+                // If the call was never bridged (e.g. no answer), set talk_epoch now.
+                if ($talkEpoch < 1000) {
+                    $talkEpoch = $epoch;
+                    $updates['talk_epoch'] = $talkEpoch;
+                    $updates['wait_sec'] = max(0, $epoch - (int) $currentLog->wait_epoch);
+                }
+
+                // If dispo_epoch was never set, use talk_epoch.
+                if ($dispoEpoch < 1000) {
+                    $dispoEpoch = $talkEpoch;
+                    $updates['dispo_epoch'] = $dispoEpoch;
+                }
+
+                $updates['dispo_sec'] = max(0, $epoch - $dispoEpoch) + (int) $currentLog->dispo_sec;
+
+                $db->table('vicidial_agent_log')
+                    ->where('agent_log_id', $session->agent_log_id)
+                    ->update($updates);
+            }
+        }
+
+        // 6. Open a new agent_log entry for the post-dispo PAUSED period.
+        $newAgentLogId = $db->table('vicidial_agent_log')->insertGetId([
+            'user' => $vicidialUser,
+            'server_ip' => $session->server_ip,
+            'event_time' => $nowStr,
+            'campaign_id' => $session->campaign_id,
+            'pause_epoch' => $epoch,
+            'pause_sec' => 0,
+            'wait_epoch' => $epoch,
+            'wait_sec' => 0,
+            'user_group' => $session->user_group ?? '',
+            'pause_type' => 'AGENT',
+            'lead_id' => $leadId ?: null,
+        ]);
+
+        // 7. Stamp the live agent with the new log ID.
+        $db->table('vicidial_live_agents')
+            ->where('user', $vicidialUser)
+            ->update(['agent_log_id' => $newAgentLogId]);
+
+        $session->update(['agent_log_id' => $newAgentLogId]);
+    }
+
+    /**
      * Log the agent out, releasing all VICIdial resources and hanging up their Zoiper call.
      */
     public function logout(AgentSession $session, string $vicidialUser): void

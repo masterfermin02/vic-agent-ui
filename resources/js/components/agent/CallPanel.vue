@@ -1,8 +1,11 @@
 <script setup lang="ts">
+import { Form } from '@inertiajs/vue3';
 import { Phone, PhoneCall, PhoneOff } from 'lucide-vue-next';
+import { Button } from '@/components/ui/button';
 import { Skeleton } from '@/components/ui/skeleton';
 import type { AgentSession } from '@/types';
 import type { CallStatus } from '@/composables/useCallState';
+import { hangup } from '@/actions/App/Http/Controllers/Agent/CallController';
 
 type Props = {
     session: AgentSession;
@@ -41,6 +44,12 @@ defineProps<Props>();
                 </p>
                 <p class="text-sm text-muted-foreground">{{ session.current_phone }}</p>
             </div>
+            <Form v-bind="hangup.form()">
+                <Button type="submit" variant="destructive" size="sm">
+                    <PhoneOff class="mr-2 h-4 w-4" />
+                    Hang Up
+                </Button>
+            </Form>
         </div>
 
         <!-- Wrap-Up -->

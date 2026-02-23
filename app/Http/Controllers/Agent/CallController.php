@@ -8,7 +8,6 @@ use App\Http\Requests\Agent\ManualDialRequest;
 use App\Http\Requests\Agent\SaveDispositionRequest;
 use App\Models\VicidialDisposition;
 use App\Services\VicidialAgentService;
-use App\Services\VicidialApiService;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Inertia\Inertia;
@@ -34,7 +33,7 @@ class CallController extends Controller
         ]);
     }
 
-    public function disposition(SaveDispositionRequest $request, VicidialApiService $api): RedirectResponse
+    public function disposition(SaveDispositionRequest $request, VicidialAgentService $service): RedirectResponse
     {
         $user = $request->user();
         $session = $user->agentSession;
@@ -43,23 +42,40 @@ class CallController extends Controller
             return to_route('agent.campaigns');
         }
 
-        $api->sendDisposition(
-            $user->vicidial_user,
-            $user->vicidial_pass,
-            $session->campaign_id,
-            $session->current_lead_id ?? '',
-            $request->validated('status'),
+        $service->sendDisposition(
+            session: $session,
+            vicidialUser: $user->vicidial_user,
+            status: $request->validated('status'),
         );
 
         $session->update([
-            'status' => 'ready',
+            'status' => 'paused',
+            'asterisk_channel' => null,
             'current_lead_id' => null,
             'current_phone' => null,
             'current_lead_name' => null,
             'call_started_at' => null,
         ]);
 
-        AgentStatusChanged::dispatch($user->id, 'ready', $session->campaign_id);
+        AgentStatusChanged::dispatch($user->id, 'paused', $session->campaign_id);
+
+        return to_route('agent.workspace');
+    }
+
+    public function hangup(Request $request, VicidialAgentService $service): RedirectResponse
+    {
+        $user = $request->user();
+        $session = $user->agentSession;
+
+        if (! $session) {
+            return to_route('agent.campaigns');
+        }
+
+        $service->hangupCall($session, $user->vicidial_user);
+
+        $session->update(['status' => 'wrapup']);
+
+        AgentStatusChanged::dispatch($user->id, 'wrapup', $session->campaign_id);
 
         return to_route('agent.workspace');
     }
@@ -83,6 +99,7 @@ class CallController extends Controller
 
         $session->update([
             'status' => 'incall',
+            'asterisk_channel' => $result['caller_id'],
             'current_lead_id' => $result['lead_id'],
             'current_phone' => $request->validated('phone'),
             'call_started_at' => now(),

@@ -13,7 +13,7 @@ type Props = {
 
 const props = defineProps<Props>();
 
-const isDisabled = () => props.session.status === 'incall' || props.session.status === 'paused';
+const isDisabled = () => ['incall', 'paused', 'wrapup'].includes(props.session.status);
 </script>
 
 <template>

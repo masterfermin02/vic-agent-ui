@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { computed } from 'vue';
+import { computed, onMounted, onUnmounted, ref } from 'vue';
 import { router } from '@inertiajs/vue3';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
@@ -11,6 +11,21 @@ type Props = {
 };
 
 const props = defineProps<Props>();
+
+const now = ref(Date.now());
+let timerInterval: ReturnType<typeof setInterval> | null = null;
+
+onMounted(() => {
+    timerInterval = setInterval(() => {
+        now.value = Date.now();
+    }, 1000);
+});
+
+onUnmounted(() => {
+    if (timerInterval) {
+        clearInterval(timerInterval);
+    }
+});
 
 const statusLabel = computed(() => {
     const labels: Record<AgentSession['status'], string> = {
@@ -41,8 +56,10 @@ const callDuration = computed(() => {
         return null;
     }
     const start = new Date(props.session.call_started_at).getTime();
-    const now = Date.now();
-    const seconds = Math.floor((now - start) / 1000);
+    const seconds = Math.floor((now.value - start) / 1000);
+    if (seconds < 0) {
+        return null;
+    }
     const minutes = Math.floor(seconds / 60);
     const secs = seconds % 60;
     return `${String(minutes).padStart(2, '0')}:${String(secs).padStart(2, '0')}`;
