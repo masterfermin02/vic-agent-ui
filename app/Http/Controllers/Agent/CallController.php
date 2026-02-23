@@ -7,6 +7,7 @@ use App\Http\Controllers\Controller;
 use App\Http\Requests\Agent\ManualDialRequest;
 use App\Http\Requests\Agent\SaveDispositionRequest;
 use App\Models\VicidialDisposition;
+use App\Services\VicidialAgentService;
 use App\Services\VicidialApiService;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
@@ -63,7 +64,7 @@ class CallController extends Controller
         return to_route('agent.workspace');
     }
 
-    public function dial(ManualDialRequest $request, VicidialApiService $api): RedirectResponse
+    public function dial(ManualDialRequest $request, VicidialAgentService $service): RedirectResponse
     {
         $user = $request->user();
         $session = $user->agentSession;
@@ -72,12 +73,22 @@ class CallController extends Controller
             return to_route('agent.campaigns');
         }
 
-        $api->manualDial(
-            $user->vicidial_user,
-            $user->vicidial_pass,
-            $session->campaign_id,
-            $request->validated('phone'),
+        $result = $service->manualDial(
+            session: $session,
+            vicidialUser: $user->vicidial_user,
+            phoneNumber: $request->validated('phone'),
+            phoneCode: $request->validated('phone_code') ?? '1',
+            leadId: $request->validated('lead_id'),
         );
+
+        $session->update([
+            'status' => 'incall',
+            'current_lead_id' => $result['lead_id'],
+            'current_phone' => $request->validated('phone'),
+            'call_started_at' => now(),
+        ]);
+
+        AgentStatusChanged::dispatch($user->id, 'incall', $session->campaign_id);
 
         return to_route('agent.workspace');
     }

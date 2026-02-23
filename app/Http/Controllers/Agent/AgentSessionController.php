@@ -7,7 +7,7 @@ use App\Http\Controllers\Controller;
 use App\Http\Requests\Agent\LoginToCampaignRequest;
 use App\Http\Requests\Agent\UpdateAgentStatusRequest;
 use App\Models\VicidialCampaign;
-use App\Services\VicidialApiService;
+use App\Services\VicidialAgentService;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Inertia\Inertia;
@@ -28,39 +28,42 @@ class AgentSessionController extends Controller
         ]);
     }
 
-    public function store(LoginToCampaignRequest $request, VicidialApiService $api): RedirectResponse
+    public function store(LoginToCampaignRequest $request, VicidialAgentService $agentService): RedirectResponse
     {
         $user = $request->user();
         $campaignId = $request->validated('campaign_id');
 
         $campaign = VicidialCampaign::active()->find($campaignId);
 
-        $api->agentLogin(
+        $sessionData = $agentService->login(
             $user->vicidial_user,
-            $user->vicidial_pass,
             $user->vicidial_phone_login,
-            $user->vicidial_phone_pass,
             $campaignId,
         );
 
         $user->agentSession()->create([
             'campaign_id' => $campaignId,
             'campaign_name' => $campaign?->campaign_name,
-            'status' => 'ready',
+            'server_ip' => $sessionData['server_ip'],
+            'conf_exten' => $sessionData['conf_exten'],
+            'session_name' => $sessionData['session_name'],
+            'agent_log_id' => $sessionData['agent_log_id'],
+            'user_group' => $sessionData['user_group'],
+            'status' => 'paused',
         ]);
 
-        AgentStatusChanged::dispatch($user->id, 'ready', $campaignId);
+        AgentStatusChanged::dispatch($user->id, 'paused', $campaignId);
 
         return to_route('agent.workspace');
     }
 
-    public function destroy(Request $request, VicidialApiService $api): RedirectResponse
+    public function destroy(Request $request, VicidialAgentService $agentService): RedirectResponse
     {
         $user = $request->user();
         $session = $user->agentSession;
 
         if ($session) {
-            $api->agentLogout($user->vicidial_user, $user->vicidial_pass, $session->campaign_id);
+            $agentService->logout($session, $user->vicidial_user);
             AgentStatusChanged::dispatch($user->id, 'logged_out', $session->campaign_id);
             $session->delete();
         }
@@ -68,7 +71,7 @@ class AgentSessionController extends Controller
         return to_route('agent.campaigns');
     }
 
-    public function updateStatus(UpdateAgentStatusRequest $request, VicidialApiService $api): RedirectResponse
+    public function updateStatus(UpdateAgentStatusRequest $request, VicidialAgentService $agentService): RedirectResponse
     {
         $user = $request->user();
         $session = $user->agentSession;
@@ -81,9 +84,9 @@ class AgentSessionController extends Controller
         $pauseCode = $request->validated('pause_code') ?? '';
 
         if ($status === 'paused') {
-            $api->setPauseCode($user->vicidial_user, $user->vicidial_pass, $session->campaign_id, $pauseCode);
+            $agentService->setPaused($session, $user->vicidial_user, $pauseCode);
         } else {
-            $api->setPauseCode($user->vicidial_user, $user->vicidial_pass, $session->campaign_id);
+            $agentService->setReady($session, $user->vicidial_user);
         }
 
         $session->update(['status' => $status]);

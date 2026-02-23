@@ -16,6 +16,8 @@ class ManualDialRequest extends FormRequest
     {
         return [
             'phone' => ['required', 'string', 'max:20'],
+            'phone_code' => ['nullable', 'string', 'max:10'],
+            'lead_id' => ['nullable', 'integer', 'min:1'],
         ];
     }
 }
