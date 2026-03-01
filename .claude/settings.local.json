@@ -10,7 +10,11 @@
       "mcp__laravel-boost__get-config",
       "mcp__laravel-boost__browser-logs",
       "mcp__laravel-boost__tinker",
-      "mcp__laravel-boost__database-schema"
+      "mcp__laravel-boost__database-schema",
+      "Bash(ssh:*)",
+      "Bash(sshpass:*)",
+      "mcp__laravel-boost__database-query",
+      "mcp__laravel-boost__read-log-entries"
     ]
   },
   "enableAllProjectMcpServers": true,

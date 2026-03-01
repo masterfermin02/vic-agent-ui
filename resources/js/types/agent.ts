@@ -48,6 +48,21 @@ export type Disposition = {
     dnc: string;
 };
 
+export type SipConfig = {
+    extension: string;
+    sipAuthUser: string;
+    sipAltAuthUser: string | null;
+    sipPassword: string;
+    sipAltPassword: string | null;
+    sipServer: string;
+    wsUrl: string;
+    codecs: string[];
+    autoAnswer: boolean;
+    mute: boolean;
+    dialpad: boolean;
+    debug: boolean;
+};
+
 export type Campaign = {
     campaign_id: string;
     campaign_name: string;

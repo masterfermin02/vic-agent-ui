@@ -257,6 +257,34 @@ class VicidialAgentService
         ]);
     }
 
+    public function ringAgentPhone(AgentSession $session, ?string $phoneLogin): void
+    {
+        if (! $session->server_ip || ! $session->conf_exten || ! $phoneLogin) {
+            return;
+        }
+
+        $phone = $this->db()->table('phones')
+            ->where('login', $phoneLogin)
+            ->where('active', 'Y')
+            ->first(['extension', 'protocol', 'ext_context']);
+
+        if (! $phone) {
+            return;
+        }
+
+        $protocol = $phone->protocol ?: 'SIP';
+        $sipChannel = "{$protocol}/{$phone->extension}";
+        $extContext = $phone->ext_context ?: 'default';
+
+        $this->originateAgentLoginCall(
+            serverIp: $session->server_ip,
+            sipChannel: $sipChannel,
+            confExten: (int) $session->conf_exten,
+            extContext: $extContext,
+            epoch: now()->unix(),
+        );
+    }
+
     /**
      * Transition the agent from PAUSED → READY.
      * Closes the current pause log entry and opens a new wait entry.
@@ -466,9 +494,9 @@ class VicidialAgentService
             'channel' => '',
             'action' => 'Originate',
             'callerid' => $callerId,
-            'cmd_line_b' => "Exten: {$dialString}",
+            'cmd_line_b' => "Channel: {$localChannel}",
             'cmd_line_c' => "Context: {$extContext}",
-            'cmd_line_d' => "Channel: {$localChannel}",
+            'cmd_line_d' => "Exten: {$dialString}",
             'cmd_line_e' => 'Priority: 1',
             'cmd_line_f' => "Callerid: {$callerId}",
             'cmd_line_g' => "Timeout: {$dialTimeoutMs}",

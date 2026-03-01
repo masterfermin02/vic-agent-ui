@@ -13,4 +13,5 @@ Route::middleware(['auth', 'verified'])->prefix('agent')->name('agent.')->group(
     Route::post('call/hangup', [CallController::class, 'hangup'])->name('call.hangup');
     Route::post('call/disposition', [CallController::class, 'disposition'])->name('call.disposition');
     Route::post('call/dial', [CallController::class, 'dial'])->name('call.dial');
+    Route::post('call/ring-softphone', [CallController::class, 'ringSoftphone'])->name('call.ring_softphone');
 });

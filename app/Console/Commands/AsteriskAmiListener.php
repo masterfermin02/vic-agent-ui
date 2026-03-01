@@ -76,7 +76,7 @@ class AsteriskAmiListener extends Command
     private function handleDialBegin(array $event): void
     {
         $channel = $event['Channel'] ?? '';
-        $session = AgentSession::where('asterisk_channel', $channel)->first();
+        $session = $this->resolveSessionFromEvent($event);
 
         if (! $session) {
             return;
@@ -96,16 +96,24 @@ class AsteriskAmiListener extends Command
     private function handleAnswered(array $event): void
     {
         $channel = $event['Channel'] ?? ($event['Channel1'] ?? '');
-        $session = AgentSession::where('asterisk_channel', $channel)->first();
+        $session = $this->resolveSessionFromEvent($event);
 
         if (! $session) {
             return;
         }
 
-        $session->update([
+        $update = [
             'status' => 'incall',
             'call_started_at' => now(),
-        ]);
+        ];
+
+        // Preserve manual-dial callerid tracking when already set. If empty, store
+        // the live AMI channel to improve subsequent event correlation.
+        if (! $session->asterisk_channel && $channel !== '') {
+            $update['asterisk_channel'] = $channel;
+        }
+
+        $session->update($update);
 
         AgentCallStatusUpdated::dispatch(
             $session->user_id,
@@ -122,7 +130,7 @@ class AsteriskAmiListener extends Command
     private function handleHangup(array $event): void
     {
         $channel = $event['Channel'] ?? '';
-        $session = AgentSession::where('asterisk_channel', $channel)->first();
+        $session = $this->resolveSessionFromEvent($event);
 
         if (! $session) {
             return;
@@ -137,5 +145,56 @@ class AsteriskAmiListener extends Command
         );
 
         AgentStatusChanged::dispatch($session->user_id, 'wrapup', $session->campaign_id);
+    }
+
+    /** @param array<string, string> $event */
+    private function resolveSessionFromEvent(array $event): ?AgentSession
+    {
+        $candidates = [];
+
+        foreach (['Channel', 'Channel1', 'Channel2', 'DestChannel', 'Source', 'Destination'] as $key) {
+            $value = trim((string) ($event[$key] ?? ''));
+            if ($value === '') {
+                continue;
+            }
+
+            $candidates[] = $value;
+            $candidates[] = preg_replace('/;[12]$/', '', $value) ?? $value;
+        }
+
+        foreach (['CallerIDNum', 'DestCallerIDNum', 'ConnectedLineNum', 'Uniqueid', 'Linkedid'] as $key) {
+            $value = trim((string) ($event[$key] ?? ''));
+            if ($value !== '') {
+                $candidates[] = $value;
+            }
+        }
+
+        $candidates = array_values(array_unique(array_filter($candidates)));
+
+        if ($candidates !== []) {
+            $session = AgentSession::query()
+                ->whereIn('asterisk_channel', $candidates)
+                ->latest('id')
+                ->first();
+
+            if ($session) {
+                return $session;
+            }
+        }
+
+        // Fallback for Local/{conf_exten}@... AMI channels where caller IDs
+        // can be unavailable or transformed by the dialplan.
+        foreach ($candidates as $candidate) {
+            if (preg_match('/^Local\/(\d+)@/i', $candidate, $matches) !== 1) {
+                continue;
+            }
+
+            return AgentSession::query()
+                ->where('conf_exten', $matches[1])
+                ->latest('id')
+                ->first();
+        }
+
+        return null;
     }
 }

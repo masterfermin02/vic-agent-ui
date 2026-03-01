@@ -80,3 +80,17 @@ it('validates phone number is required for manual dial', function () {
         ->post('/agent/call/dial', ['phone' => ''])
         ->assertSessionHasErrors('phone');
 });
+
+it('rings softphone for active session', function () {
+    $session = AgentSession::factory()->create(['status' => 'paused']);
+    $user = $session->user;
+
+    mock(VicidialAgentService::class)
+        ->shouldReceive('ringAgentPhone')
+        ->once()
+        ->withArgs(fn ($incomingSession, $phoneLogin) => $incomingSession->id === $session->id && $phoneLogin === $user->vicidial_phone_login);
+
+    $this->actingAs($user)
+        ->post('/agent/call/ring-softphone')
+        ->assertNoContent();
+});
