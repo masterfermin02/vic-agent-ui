@@ -1,11 +1,11 @@
 <script setup lang="ts">
 import { Form } from '@inertiajs/vue3';
 import { AlertTriangle, Phone, PhoneCall, PhoneOff } from 'lucide-vue-next';
+import { hangup } from '@/actions/App/Http/Controllers/Agent/CallController';
 import { Button } from '@/components/ui/button';
 import { Skeleton } from '@/components/ui/skeleton';
-import type { AgentSession } from '@/types';
 import type { CallStatus } from '@/composables/useCallState';
-import { hangup } from '@/actions/App/Http/Controllers/Agent/CallController';
+import type { AgentSession } from '@/types';
 
 type Props = {
     session: AgentSession;

@@ -1,6 +1,8 @@
 <script setup lang="ts">
-import { computed } from 'vue';
 import { Form } from '@inertiajs/vue3';
+import { computed } from 'vue';
+import { disposition } from '@/actions/App/Http/Controllers/Agent/CallController';
+import { Button } from '@/components/ui/button';
 import {
     Dialog,
     DialogContent,
@@ -8,9 +10,7 @@ import {
     DialogHeader,
     DialogTitle,
 } from '@/components/ui/dialog';
-import { Button } from '@/components/ui/button';
 import type { AgentSession, Disposition } from '@/types';
-import { disposition } from '@/actions/App/Http/Controllers/Agent/CallController';
 
 type Props = {
     session: AgentSession;

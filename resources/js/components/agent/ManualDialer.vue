@@ -1,11 +1,11 @@
 <script setup lang="ts">
 import { Form } from '@inertiajs/vue3';
 import { Phone } from 'lucide-vue-next';
+import { dial } from '@/actions/App/Http/Controllers/Agent/CallController';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import type { AgentSession } from '@/types';
-import { dial } from '@/actions/App/Http/Controllers/Agent/CallController';
 
 type Props = {
     session: AgentSession;

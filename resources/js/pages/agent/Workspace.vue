@@ -1,7 +1,6 @@
 <script setup lang="ts">
 import { Head } from '@inertiajs/vue3';
 import { usePage } from '@inertiajs/vue3';
-import AppLayout from '@/layouts/AppLayout.vue';
 import AgentPerformanceHeader from '@/components/agent/AgentPerformanceHeader.vue';
 import AgentStatusBar from '@/components/agent/AgentStatusBar.vue';
 import CallPanel from '@/components/agent/CallPanel.vue';
@@ -13,6 +12,7 @@ import { useAgentSession } from '@/composables/useAgentSession';
 import { useCallState } from '@/composables/useCallState';
 import { useConnectionState } from '@/composables/useConnectionState';
 import { useSipWatchdog } from '@/composables/useSipWatchdog';
+import AppLayout from '@/layouts/AppLayout.vue';
 import type { AgentPerformance, AgentSession, BreadcrumbItem, Disposition, Lead } from '@/types';
 
 type Props = {

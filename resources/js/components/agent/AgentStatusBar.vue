@@ -1,10 +1,10 @@
 <script setup lang="ts">
-import { computed, onMounted, onUnmounted, ref } from 'vue';
 import { router } from '@inertiajs/vue3';
+import { computed, onMounted, onUnmounted, ref } from 'vue';
+import { updateStatus, destroy } from '@/actions/App/Http/Controllers/Agent/AgentSessionController';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import type { AgentSession } from '@/types';
-import { updateStatus, destroy } from '@/actions/App/Http/Controllers/Agent/AgentSessionController';
 
 type Props = {
     session: AgentSession;

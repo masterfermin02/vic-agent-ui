@@ -2,10 +2,10 @@
 import { Head } from '@inertiajs/vue3';
 import { Form } from '@inertiajs/vue3';
 import { Headphones } from 'lucide-vue-next';
+import { store } from '@/actions/App/Http/Controllers/Agent/AgentSessionController';
 import { Button } from '@/components/ui/button';
 import AppLayout from '@/layouts/AppLayout.vue';
 import type { BreadcrumbItem, Campaign } from '@/types';
-import { store } from '@/actions/App/Http/Controllers/Agent/AgentSessionController';
 
 type Props = {
     campaigns: Campaign[];

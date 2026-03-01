@@ -1,5 +1,5 @@
-import { onMounted, ref } from 'vue';
 import { router } from '@inertiajs/vue3';
+import { onMounted, ref } from 'vue';
 
 export type ConnectionState = 'connected' | 'reconnecting' | 'failed';
 

@@ -1,7 +1,7 @@
 import { onUnmounted, ref, watch } from 'vue';
 import type { Ref } from 'vue';
-import type { AgentSession } from '@/types';
 import type { CallStatus } from '@/composables/useCallState';
+import type { AgentSession } from '@/types';
 
 export function useSipWatchdog(session: Ref<AgentSession>, callStatus: Ref<CallStatus>) {
     const sipWarning = ref(false);

@@ -13,10 +13,10 @@ import {
     SidebarMenuButton,
     SidebarMenuItem,
 } from '@/components/ui/sidebar';
-import { type NavItem } from '@/types';
-import AppLogo from './AppLogo.vue';
 import { dashboard } from '@/routes';
 import { campaigns } from '@/routes/agent';
+import { type NavItem } from '@/types';
+import AppLogo from './AppLogo.vue';
 
 const mainNavItems: NavItem[] = [
     {
