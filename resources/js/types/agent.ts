@@ -1,3 +1,26 @@
+export type DispositionRecord = {
+    calledAt: string;
+    status: string;
+    agentId: string;
+    durationSeconds: number;
+    notes: string;
+};
+
+export type Lead = {
+    id: number;
+    firstName: string;
+    lastName: string;
+    phone: string;
+    phoneCode: string;
+    status: string;
+    email: string;
+    address: string;
+    notes: string;
+    calledCount: number;
+    previousDispositions: DispositionRecord[];
+    customFields: Record<string, string>;
+};
+
 export type AgentSession = {
     id: number;
     user_id: number;

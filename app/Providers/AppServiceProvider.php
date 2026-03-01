@@ -2,6 +2,9 @@
 
 namespace App\Providers;
 
+use App\Contracts\LeadRepository;
+use App\Repositories\AsteriskLeadRepository;
+use App\Repositories\VicidialLeadRepository;
 use App\Services\VicidialApiService;
 use Carbon\CarbonImmutable;
 use Illuminate\Support\Facades\Date;
@@ -17,6 +20,12 @@ class AppServiceProvider extends ServiceProvider
     public function register(): void
     {
         $this->app->singleton(VicidialApiService::class);
+
+        $this->app->bind(LeadRepository::class, function () {
+            return config('vicidial.lead_repository') === 'mock'
+                ? new AsteriskLeadRepository
+                : new VicidialLeadRepository;
+        });
     }
 
     /**

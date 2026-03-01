@@ -41,7 +41,7 @@ class AgentSessionController extends Controller
             $campaignId,
         );
 
-        $user->agentSession()->create([
+        $user->agentSession()->updateOrCreate([], [
             'campaign_id' => $campaignId,
             'campaign_name' => $campaign?->campaign_name,
             'server_ip' => $sessionData['server_ip'],

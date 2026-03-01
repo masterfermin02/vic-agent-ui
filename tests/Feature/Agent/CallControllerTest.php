@@ -3,7 +3,7 @@
 use App\Events\AgentStatusChanged;
 use App\Models\AgentSession;
 use App\Models\User;
-use App\Services\VicidialApiService;
+use App\Services\VicidialAgentService;
 use Illuminate\Support\Facades\Event;
 use Tests\TestSupport\WithVicidialDatabase;
 
@@ -39,34 +39,38 @@ it('saves disposition and resets session to ready', function () {
     ]);
     $user = $session->user;
 
-    mock(VicidialApiService::class)
+    mock(VicidialAgentService::class)
         ->shouldReceive('sendDisposition')
-        ->once()
-        ->andReturn('disposition--OK');
+        ->once();
 
     $this->actingAs($user)
         ->post('/agent/call/disposition', ['status' => 'DC'])
         ->assertRedirect('/agent/workspace');
 
     $refreshed = $session->fresh();
-    expect($refreshed->status)->toBe('ready');
+    expect($refreshed->status)->toBe('paused');
     expect($refreshed->current_lead_id)->toBeNull();
 
-    Event::assertDispatched(AgentStatusChanged::class, fn ($event) => $event->status === 'ready');
+    Event::assertDispatched(AgentStatusChanged::class, fn ($event) => $event->status === 'paused');
 });
 
 it('initiates manual dial', function () {
+    Event::fake();
+
     $session = AgentSession::factory()->create();
     $user = $session->user;
 
-    mock(VicidialApiService::class)
+    mock(VicidialAgentService::class)
         ->shouldReceive('manualDial')
         ->once()
-        ->andReturn('dial--OK');
+        ->andReturn(['caller_id' => 'MTEST0001', 'lead_id' => 100]);
 
     $this->actingAs($user)
         ->post('/agent/call/dial', ['phone' => '5551234567'])
         ->assertRedirect('/agent/workspace');
+
+    expect($session->fresh()->status)->toBe('incall');
+    Event::assertDispatched(AgentStatusChanged::class, fn ($event) => $event->status === 'incall');
 });
 
 it('validates phone number is required for manual dial', function () {

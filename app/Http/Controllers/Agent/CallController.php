@@ -2,6 +2,7 @@
 
 namespace App\Http\Controllers\Agent;
 
+use App\Contracts\LeadRepository;
 use App\Events\AgentStatusChanged;
 use App\Http\Controllers\Controller;
 use App\Http\Requests\Agent\ManualDialRequest;
@@ -27,9 +28,14 @@ class CallController extends Controller
             ->selectable()
             ->get();
 
+        $lead = $session->current_lead_id
+            ? rescue(fn () => app(LeadRepository::class)->findByLeadId((int) $session->current_lead_id))
+            : null;
+
         return Inertia::render('agent/Workspace', [
             'session' => $session,
             'dispositions' => $dispositions,
+            'lead' => $lead,
         ]);
     }
 

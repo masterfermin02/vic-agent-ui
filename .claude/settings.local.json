@@ -5,7 +5,12 @@
       "mcp__laravel-boost__search-docs",
       "Bash(php artisan make:request:*)",
       "Bash(php artisan:*)",
-      "Bash(vendor/bin/pint:*)"
+      "Bash(vendor/bin/pint:*)",
+      "mcp__laravel-boost__last-error",
+      "mcp__laravel-boost__get-config",
+      "mcp__laravel-boost__browser-logs",
+      "mcp__laravel-boost__tinker",
+      "mcp__laravel-boost__database-schema"
     ]
   },
   "enableAllProjectMcpServers": true,

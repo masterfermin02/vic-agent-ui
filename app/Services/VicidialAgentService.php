@@ -577,17 +577,7 @@ class VicidialAgentService
             ->where('user', $vicidialUser)
             ->update(['external_hangup' => 0]);
 
-        // Resolve dialplan context from agent's phone record.
-        $vicUser = $db->table('vicidial_users')->where('user', $vicidialUser)->first(['phone_login']);
-        $extContext = 'default';
-
-        if ($vicUser?->phone_login) {
-            $extContext = $db->table('phones')
-                ->where('login', $vicUser->phone_login)
-                ->value('ext_context') ?: 'default';
-        }
-
-        // If Asterisk has assigned a real customer channel, hang it up directly.
+        // Hang up only the customer channel — the agent remains in the conference bridge.
         $autoCall = $db->table('vicidial_auto_calls')
             ->where('callerid', $session->asterisk_channel)
             ->where('server_ip', $session->server_ip)
@@ -615,28 +605,6 @@ class VicidialAgentService
                 'cmd_line_k' => '',
             ]);
         }
-
-        // Kickall: clear all conference bridge participants via Local/5555{conf_exten}.
-        $db->table('vicidial_manager')->insert([
-            'uniqueid' => '',
-            'entry_date' => $now,
-            'status' => 'NEW',
-            'response' => 'N',
-            'server_ip' => $session->server_ip,
-            'channel' => '',
-            'action' => 'Originate',
-            'callerid' => $callerId,
-            'cmd_line_b' => "Channel: Local/5555{$session->conf_exten}@{$extContext}",
-            'cmd_line_c' => "Context: {$extContext}",
-            'cmd_line_d' => 'Exten: 8300',
-            'cmd_line_e' => 'Priority: 1',
-            'cmd_line_f' => "Callerid: {$callerId}",
-            'cmd_line_g' => '',
-            'cmd_line_h' => '',
-            'cmd_line_i' => '',
-            'cmd_line_j' => '',
-            'cmd_line_k' => '',
-        ]);
     }
 
     /**

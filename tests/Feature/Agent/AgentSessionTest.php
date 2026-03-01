@@ -3,7 +3,7 @@
 use App\Events\AgentStatusChanged;
 use App\Models\AgentSession;
 use App\Models\User;
-use App\Services\VicidialApiService;
+use App\Services\VicidialAgentService;
 use Illuminate\Support\Facades\Event;
 use Tests\TestSupport\WithVicidialDatabase;
 
@@ -37,10 +37,16 @@ it('logs agent into campaign and creates session', function () {
 
     $user = User::factory()->vicidialCredentials()->create();
 
-    mock(VicidialApiService::class)
-        ->shouldReceive('agentLogin')
+    mock(VicidialAgentService::class)
+        ->shouldReceive('login')
         ->once()
-        ->andReturn('agent_login--OK');
+        ->andReturn([
+            'server_ip' => '127.0.0.1',
+            'conf_exten' => 8001,
+            'session_name' => 'test_session',
+            'agent_log_id' => 1,
+            'user_group' => 'AGENTS',
+        ]);
 
     $this->actingAs($user)
         ->post('/agent/session', ['campaign_id' => 'TEST'])
@@ -49,7 +55,32 @@ it('logs agent into campaign and creates session', function () {
     expect($user->agentSession)->not->toBeNull();
     expect($user->fresh()->agentSession->campaign_id)->toBe('TEST');
 
-    Event::assertDispatched(AgentStatusChanged::class, fn ($event) => $event->userId === $user->id && $event->status === 'ready');
+    Event::assertDispatched(AgentStatusChanged::class, fn ($event) => $event->userId === $user->id && $event->status === 'paused');
+});
+
+it('updates existing session when logging into a new campaign', function () {
+    Event::fake();
+
+    $session = AgentSession::factory()->create(['campaign_id' => 'OLD']);
+    $user = $session->user;
+
+    mock(VicidialAgentService::class)
+        ->shouldReceive('login')
+        ->once()
+        ->andReturn([
+            'server_ip' => '127.0.0.1',
+            'conf_exten' => 8001,
+            'session_name' => 'test_session',
+            'agent_log_id' => 1,
+            'user_group' => 'AGENTS',
+        ]);
+
+    $this->actingAs($user)
+        ->post('/agent/session', ['campaign_id' => 'TEST'])
+        ->assertRedirect('/agent/workspace');
+
+    expect(AgentSession::where('user_id', $user->id)->count())->toBe(1);
+    expect($user->fresh()->agentSession->campaign_id)->toBe('TEST');
 });
 
 it('logs agent out and deletes session', function () {
@@ -58,10 +89,9 @@ it('logs agent out and deletes session', function () {
     $session = AgentSession::factory()->create();
     $user = $session->user;
 
-    mock(VicidialApiService::class)
-        ->shouldReceive('agentLogout')
-        ->once()
-        ->andReturn('agent_logout--OK');
+    mock(VicidialAgentService::class)
+        ->shouldReceive('logout')
+        ->once();
 
     $this->actingAs($user)
         ->delete('/agent/session')
@@ -78,10 +108,9 @@ it('updates agent status to paused', function () {
     $session = AgentSession::factory()->create();
     $user = $session->user;
 
-    mock(VicidialApiService::class)
-        ->shouldReceive('setPauseCode')
-        ->once()
-        ->andReturn('pause--OK');
+    mock(VicidialAgentService::class)
+        ->shouldReceive('setPaused')
+        ->once();
 
     $this->actingAs($user)
         ->put('/agent/status', ['status' => 'paused'])
@@ -98,10 +127,10 @@ it('updates agent status to ready', function () {
     $session = AgentSession::factory()->create(['status' => 'paused']);
     $user = $session->user;
 
-    mock(VicidialApiService::class)
-        ->shouldReceive('setPauseCode')
+    mock(VicidialAgentService::class)
+        ->shouldReceive('setReady')
         ->once()
-        ->andReturn('pause--OK');
+        ->andReturn(2);
 
     $this->actingAs($user)
         ->put('/agent/status', ['status' => 'ready'])

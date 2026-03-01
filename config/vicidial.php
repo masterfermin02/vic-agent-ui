@@ -2,6 +2,7 @@
 
 return [
     'api_url' => env('VICIDIAL_API_URL', 'http://127.0.0.1/agc/api.php'),
+    'lead_repository' => env('VICIDIAL_LEAD_REPOSITORY', 'vicidial'),
     'ami' => [
         'host' => env('VICIDIAL_AMI_HOST', '127.0.0.1'),
         'port' => (int) env('VICIDIAL_AMI_PORT', 5038),
