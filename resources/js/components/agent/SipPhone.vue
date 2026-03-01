@@ -2,15 +2,7 @@
 import { Mic, MicOff, Phone, PhoneOff, Wifi, WifiOff } from 'lucide-vue-next';
 import { onMounted, ref } from 'vue';
 import { Button } from '@/components/ui/button';
-import type { SipStatus, SipCallStatus } from '@/composables/useSipPhone';
-
-type Props = {
-    sipStatus: SipStatus;
-    sipCallStatus: SipCallStatus;
-    isMuted: boolean;
-};
-
-const props = defineProps<Props>();
+import type { SipStatus } from '@/composables/useSipPhone';
 
 const emit = defineEmits<{
     answer: [];
