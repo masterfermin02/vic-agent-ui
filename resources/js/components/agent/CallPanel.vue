@@ -1,6 +1,6 @@
 <script setup lang="ts">
 import { Form } from '@inertiajs/vue3';
-import { Phone, PhoneCall, PhoneOff } from 'lucide-vue-next';
+import { AlertTriangle, Phone, PhoneCall, PhoneOff } from 'lucide-vue-next';
 import { Button } from '@/components/ui/button';
 import { Skeleton } from '@/components/ui/skeleton';
 import type { AgentSession } from '@/types';
@@ -10,6 +10,7 @@ import { hangup } from '@/actions/App/Http/Controllers/Agent/CallController';
 type Props = {
     session: AgentSession;
     callStatus: CallStatus;
+    sipWarning: boolean;
 };
 
 defineProps<Props>();
@@ -50,6 +51,11 @@ defineProps<Props>();
                     Hang Up
                 </Button>
             </Form>
+
+            <div v-if="sipWarning" class="flex items-center gap-2 rounded-md border border-amber-300 bg-amber-50 px-3 py-2 text-sm text-amber-800">
+                <AlertTriangle class="h-4 w-4 shrink-0" />
+                <span>Phone not responding — check your SIP extension</span>
+            </div>
         </div>
 
         <!-- Wrap-Up -->

@@ -1,3 +1,10 @@
+export type AgentPerformance = {
+    callsToday: number;
+    totalTalkSeconds: number;
+    avgDurationSeconds: number;
+    conversionRate: number;
+};
+
 export type DispositionRecord = {
     calledAt: string;
     status: string;

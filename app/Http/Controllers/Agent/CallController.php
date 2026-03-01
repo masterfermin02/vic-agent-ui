@@ -3,6 +3,7 @@
 namespace App\Http\Controllers\Agent;
 
 use App\Contracts\LeadRepository;
+use App\Data\AgentPerformanceDTO;
 use App\Events\AgentStatusChanged;
 use App\Http\Controllers\Controller;
 use App\Http\Requests\Agent\ManualDialRequest;
@@ -11,6 +12,7 @@ use App\Models\VicidialDisposition;
 use App\Services\VicidialAgentService;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\DB;
 use Inertia\Inertia;
 use Inertia\Response;
 
@@ -32,11 +34,50 @@ class CallController extends Controller
             ? rescue(fn () => app(LeadRepository::class)->findByLeadId((int) $session->current_lead_id))
             : null;
 
+        $performance = rescue(fn () => $this->loadPerformance($request->user()->vicidial_user, $session));
+
         return Inertia::render('agent/Workspace', [
             'session' => $session,
             'dispositions' => $dispositions,
             'lead' => $lead,
+            'performance' => $performance,
         ]);
+    }
+
+    private function loadPerformance(string $vicidialUser, \App\Models\AgentSession $session): AgentPerformanceDTO
+    {
+        $vdb = DB::connection('vicidial');
+        $today = today()->toDateString();
+
+        $callsToday = (int) $vdb->table('vicidial_live_agents')
+            ->where('user', $vicidialUser)
+            ->where('server_ip', $session->server_ip)
+            ->value('calls_today');
+
+        $talkStats = $vdb->table('vicidial_log')
+            ->where('user', $vicidialUser)
+            ->whereDate('call_date', $today)
+            ->selectRaw('COALESCE(SUM(length_in_sec), 0) as total_talk, COALESCE(AVG(length_in_sec), 0) as avg_talk')
+            ->first();
+
+        $saleStatuses = VicidialDisposition::forCampaign($session->campaign_id)
+            ->where('sale', 'Y')
+            ->pluck('status');
+
+        $conversions = $saleStatuses->isNotEmpty()
+            ? $vdb->table('vicidial_log')
+                ->where('user', $vicidialUser)
+                ->whereDate('call_date', $today)
+                ->whereIn('status', $saleStatuses)
+                ->count()
+            : 0;
+
+        return new AgentPerformanceDTO(
+            callsToday: $callsToday,
+            totalTalkSeconds: (int) ($talkStats->total_talk ?? 0),
+            avgDurationSeconds: (int) round($talkStats->avg_talk ?? 0),
+            conversionRate: $callsToday > 0 ? round($conversions / $callsToday * 100, 1) : 0.0,
+        );
     }
 
     public function disposition(SaveDispositionRequest $request, VicidialAgentService $service): RedirectResponse

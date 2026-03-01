@@ -2,6 +2,10 @@
 
 A modern, real-time web interface for VICIdial call center agents built with Laravel 12, Inertia.js v2, and Vue 3.
 
+## Screenshot
+
+![Agent Workspace](screen/agent_screen.png)
+
 ## Overview
 
 This application replaces the default VICIdial agent screen with a responsive, WebSocket-powered UI. It connects directly to your existing VICIdial/Asterisk infrastructure — no modifications to VICIdial are required.
