@@ -33,7 +33,7 @@ trait WithVicidialDatabase
         });
 
         Schema::connection('vicidial')->table('vicidial_campaigns', function ($table): void {
-            $table->string('script', 20)->nullable()->default('');
+            $table->string('campaign_script', 20)->nullable()->default('');
         });
     }
 }

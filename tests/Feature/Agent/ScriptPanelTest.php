@@ -20,7 +20,7 @@ it('passes null script when campaign has no script', function () {
         'campaign_name' => 'No Script Campaign',
         'active' => 'Y',
         'dial_method' => 'MANUAL',
-        'script' => '',
+        'campaign_script' => '',
     ]);
 
     $session = AgentSession::factory()->create([
@@ -50,7 +50,7 @@ it('passes script data when campaign has a script', function () {
         'campaign_name' => 'Scripted Campaign',
         'active' => 'Y',
         'dial_method' => 'MANUAL',
-        'script' => 'MYSCRIPT',
+        'campaign_script' => 'MYSCRIPT',
     ]);
 
     $session = AgentSession::factory()->create([
@@ -81,7 +81,7 @@ it('substitutes lead variables in script body', function () {
         'campaign_name' => 'Variable Campaign',
         'active' => 'Y',
         'dial_method' => 'MANUAL',
-        'script' => 'VARSCRIPT',
+        'campaign_script' => 'VARSCRIPT',
     ]);
 
     $leadId = 77;
@@ -134,7 +134,7 @@ it('passes null script when script is inactive', function () {
         'campaign_name' => 'Inactive Script Campaign',
         'active' => 'Y',
         'dial_method' => 'MANUAL',
-        'script' => 'INACTIVE',
+        'campaign_script' => 'INACTIVE',
     ]);
 
     $session = AgentSession::factory()->create([

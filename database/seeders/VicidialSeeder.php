@@ -240,7 +240,7 @@ class VicidialSeeder extends Seeder
 
         $db->table('vicidial_campaigns')
             ->where('campaign_id', 'TESTCAMP')
-            ->update(['script' => 'TESTSCRIPT']);
+            ->update(['campaign_script' => 'TESTSCRIPT']);
     }
 
     private function updateLocalUserCredentials(): void

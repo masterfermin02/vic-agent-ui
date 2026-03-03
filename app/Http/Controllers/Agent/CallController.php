@@ -209,14 +209,14 @@ class CallController extends Controller
 
         $campaign = $vdb->table('vicidial_campaigns')
             ->where('campaign_id', $campaignId)
-            ->first(['script']);
+            ->first(['campaign_script']);
 
-        if (! $campaign || empty($campaign->script)) {
+        if (! $campaign || empty($campaign->campaign_script)) {
             return null;
         }
 
         $scriptRow = $vdb->table('vicidial_scripts')
-            ->where('script_id', $campaign->script)
+            ->where('script_id', $campaign->campaign_script)
             ->where('active', 'Y')
             ->first(['script_name', 'script_body']);
 
