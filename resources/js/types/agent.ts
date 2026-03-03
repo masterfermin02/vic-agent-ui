@@ -68,3 +68,8 @@ export type Campaign = {
     campaign_name: string;
     dial_method: string;
 };
+
+export type Script = {
+    name: string;
+    body: string;
+};

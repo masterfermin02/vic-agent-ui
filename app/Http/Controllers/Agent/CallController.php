@@ -4,6 +4,8 @@ namespace App\Http\Controllers\Agent;
 
 use App\Contracts\LeadRepository;
 use App\Data\AgentPerformanceDTO;
+use App\Data\LeadDTO;
+use App\Data\ScriptDTO;
 use App\Data\SipConfigDTO;
 use App\Events\AgentStatusChanged;
 use App\Http\Controllers\Controller;
@@ -45,12 +47,15 @@ class CallController extends Controller
             $request->isSecure(),
         ));
 
+        $script = rescue(fn () => $this->loadScript($session->campaign_id, $lead));
+
         return Inertia::render('agent/Workspace', [
             'session' => $session,
             'dispositions' => $dispositions,
             'lead' => $lead,
             'performance' => $performance,
             'sip' => $sip,
+            'script' => $script,
         ]);
     }
 
@@ -195,6 +200,51 @@ class CallController extends Controller
             totalTalkSeconds: (int) ($talkStats->total_talk ?? 0),
             avgDurationSeconds: (int) round($talkStats->avg_talk ?? 0),
             conversionRate: $callsToday > 0 ? round($conversions / $callsToday * 100, 1) : 0.0,
+        );
+    }
+
+    private function loadScript(string $campaignId, ?LeadDTO $lead): ?ScriptDTO
+    {
+        $vdb = DB::connection('vicidial');
+
+        $campaign = $vdb->table('vicidial_campaigns')
+            ->where('campaign_id', $campaignId)
+            ->first(['script']);
+
+        if (! $campaign || empty($campaign->script)) {
+            return null;
+        }
+
+        $scriptRow = $vdb->table('vicidial_scripts')
+            ->where('script_id', $campaign->script)
+            ->where('active', 'Y')
+            ->first(['script_name', 'script_body']);
+
+        if (! $scriptRow) {
+            return null;
+        }
+
+        $body = str_replace(
+            [
+                '{--lead_first_name--}',
+                '{--lead_last_name--}',
+                '{--lead_phone_number--}',
+                '{--lead_email--}',
+                '{--campaign_id--}',
+            ],
+            [
+                $lead?->firstName ?? '',
+                $lead?->lastName ?? '',
+                $lead?->phone ?? '',
+                $lead?->email ?? '',
+                $campaignId,
+            ],
+            (string) $scriptRow->script_body,
+        );
+
+        return new ScriptDTO(
+            name: (string) $scriptRow->script_name,
+            body: $body,
         );
     }
 

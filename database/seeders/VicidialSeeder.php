@@ -14,6 +14,7 @@ class VicidialSeeder extends Seeder
         $this->seedPhone();
         $this->seedAgentUser();
         $this->seedDispositions();
+        $this->seedScript();
         $this->createVicidialListTable();
         $this->seedLeadList();
         $this->seedLeads();
@@ -224,6 +225,22 @@ class VicidialSeeder extends Seeder
                 'owner' => '',
             ]);
         }
+    }
+
+    private function seedScript(): void
+    {
+        $db = DB::connection('vicidial');
+
+        $db->table('vicidial_scripts')->insertOrIgnore([
+            'script_id' => 'TESTSCRIPT',
+            'script_name' => 'Test Campaign Script',
+            'script_body' => '<p>Hello {--lead_first_name--} {--lead_last_name--},</p><p>Thank you for your interest in our {--campaign_id--} campaign. We are calling about your account. Your phone on file is {--lead_phone_number--}.</p>',
+            'active' => 'Y',
+        ]);
+
+        $db->table('vicidial_campaigns')
+            ->where('campaign_id', 'TESTCAMP')
+            ->update(['script' => 'TESTSCRIPT']);
     }
 
     private function updateLocalUserCredentials(): void

@@ -9,6 +9,7 @@ import ConnectionBanner from '@/components/agent/ConnectionBanner.vue';
 import DispositionModal from '@/components/agent/DispositionModal.vue';
 import LeadPanel from '@/components/agent/LeadPanel.vue';
 import ManualDialer from '@/components/agent/ManualDialer.vue';
+import ScriptPanel from '@/components/agent/ScriptPanel.vue';
 import SipPhone from '@/components/agent/SipPhone.vue';
 import { useAgentSession } from '@/composables/useAgentSession';
 import { useCallState } from '@/composables/useCallState';
@@ -16,7 +17,7 @@ import { useConnectionState } from '@/composables/useConnectionState';
 import { useSipPhone } from '@/composables/useSipPhone';
 import { useSipWatchdog } from '@/composables/useSipWatchdog';
 import AppLayout from '@/layouts/AppLayout.vue';
-import type { AgentPerformance, AgentSession, BreadcrumbItem, Disposition, Lead, SipConfig } from '@/types';
+import type { AgentPerformance, AgentSession, BreadcrumbItem, Disposition, Lead, Script, SipConfig } from '@/types';
 
 type Props = {
     session: AgentSession;
@@ -24,6 +25,7 @@ type Props = {
     lead: Lead | null;
     performance: AgentPerformance | null;
     sip: SipConfig | null;
+    script: Script | null;
 };
 
 const props = defineProps<Props>();
@@ -129,6 +131,8 @@ watch([sipStatus, () => session.value.status], async ([status, agentStatus]) => 
                     @audio-mounted="onAudioMounted"
                 />
             </div>
+
+            <ScriptPanel :script="script" />
         </div>
 
         <DispositionModal :session="session" :dispositions="dispositions" />

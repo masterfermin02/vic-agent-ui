@@ -24,5 +24,16 @@ trait WithVicidialDatabase
             $table->char('sale', 1)->default('N');
             $table->char('dnc', 1)->default('N');
         });
+
+        Schema::connection('vicidial')->create('vicidial_scripts', function ($table): void {
+            $table->string('script_id', 20)->primary();
+            $table->string('script_name', 50)->default('');
+            $table->longText('script_body')->nullable();
+            $table->char('active', 1)->default('Y');
+        });
+
+        Schema::connection('vicidial')->table('vicidial_campaigns', function ($table): void {
+            $table->string('script', 20)->nullable()->default('');
+        });
     }
 }
